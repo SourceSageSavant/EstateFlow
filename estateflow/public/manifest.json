@@ -1,0 +1,55 @@
+{
+    "name": "EstateFlow",
+    "short_name": "EstateFlow",
+    "description": "Property management platform for landlords, tenants, and security guards",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#0f172a",
+    "theme_color": "#4f46e5",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "/icons/icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/icon.svg",
+            "sizes": "512x512",
+            "type": "image/svg+xml",
+            "purpose": "maskable"
+        }
+    ],
+    "categories": [
+        "business",
+        "productivity"
+    ],
+    "screenshots": [],
+    "shortcuts": [
+        {
+            "name": "Verify Code",
+            "short_name": "Verify",
+            "description": "Verify visitor access code",
+            "url": "/guard",
+            "icons": [
+                {
+                    "src": "/icons/icon.svg",
+                    "sizes": "any"
+                }
+            ]
+        },
+        {
+            "name": "Create Pass",
+            "short_name": "Pass",
+            "description": "Create visitor gate pass",
+            "url": "/tenant/passes",
+            "icons": [
+                {
+                    "src": "/icons/icon.svg",
+                    "sizes": "any"
+                }
+            ]
+        }
+    ]
+}
