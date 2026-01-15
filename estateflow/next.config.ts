@@ -6,10 +6,6 @@ const nextConfig: NextConfig = {
     // Types will be fixed when database.types.ts is generated
     ignoreBuildErrors: true,
   },
-  eslint: {
-    // Disable linting during build
-    ignoreDuringBuilds: true,
-  },
 };
 
 export default nextConfig;
