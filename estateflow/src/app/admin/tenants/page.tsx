@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import InviteModal from '@/components/InviteModal';
 import {
     Users,
     Plus,
@@ -15,14 +16,17 @@ import {
     UserPlus,
     Edit,
     Trash2,
+    Send,
 } from 'lucide-react';
 
 export default function TenantsPage() {
     const [tenants, setTenants] = useState<any[]>([]);
     const [units, setUnits] = useState<any[]>([]);
+    const [properties, setProperties] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [showAddModal, setShowAddModal] = useState(false);
+    const [showInviteModal, setShowInviteModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showAssignModal, setShowAssignModal] = useState(false);
@@ -48,8 +52,10 @@ export default function TenantsPage() {
 
         const { data: propertyData } = await supabase
             .from('properties')
-            .select('id')
-            .eq('owner_id', user.id);
+            .select('id, name')
+            .or(`owner_id.eq.${user.id},landlord_id.eq.${user.id}`);
+
+        setProperties(propertyData || []);
 
         if (propertyData && propertyData.length > 0) {
             const propertyIds = propertyData.map((p: any) => p.id);
@@ -115,11 +121,11 @@ export default function TenantsPage() {
                     <p className="text-slate-600 mt-1">Manage your property tenants</p>
                 </div>
                 <button
-                    onClick={() => setShowAddModal(true)}
+                    onClick={() => setShowInviteModal(true)}
                     className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
                 >
-                    <Plus size={20} />
-                    <span>Add Tenant</span>
+                    <Send size={20} />
+                    <span>Invite Tenant</span>
                 </button>
             </div>
 
@@ -370,6 +376,24 @@ export default function TenantsPage() {
                     }}
                 />
             )}
+
+            {/* Invite Tenant Modal */}
+            <InviteModal
+                isOpen={showInviteModal}
+                onClose={() => setShowInviteModal(false)}
+                onInviteSent={() => {
+                    setShowInviteModal(false);
+                    fetchData();
+                }}
+                role="tenant"
+                properties={properties}
+                units={units.map(u => ({
+                    id: u.id,
+                    unit_number: u.unit_number,
+                    property_id: u.property_id,
+                    rent_amount: u.rent_amount,
+                }))}
+            />
         </div>
     );
 }

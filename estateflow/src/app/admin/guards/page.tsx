@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import InviteModal from '@/components/InviteModal';
 import {
     Shield,
     Plus,
@@ -17,6 +18,7 @@ import {
     Trash2,
     CheckCircle,
     XCircle,
+    Send,
 } from 'lucide-react';
 
 export default function GuardsPage() {
@@ -26,6 +28,7 @@ export default function GuardsPage() {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [showAddModal, setShowAddModal] = useState(false);
+    const [showInviteModal, setShowInviteModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showAssignModal, setShowAssignModal] = useState(false);
@@ -113,11 +116,11 @@ export default function GuardsPage() {
                     <p className="text-slate-600 mt-1">Manage security personnel for your properties</p>
                 </div>
                 <button
-                    onClick={() => setShowAddModal(true)}
+                    onClick={() => setShowInviteModal(true)}
                     className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
                 >
-                    <Plus size={20} />
-                    <span>Add Guard</span>
+                    <Send size={20} />
+                    <span>Invite Guard</span>
                 </button>
             </div>
 
@@ -360,6 +363,18 @@ export default function GuardsPage() {
                     }}
                 />
             )}
+
+            {/* Invite Guard Modal */}
+            <InviteModal
+                isOpen={showInviteModal}
+                onClose={() => setShowInviteModal(false)}
+                onInviteSent={() => {
+                    setShowInviteModal(false);
+                    fetchData();
+                }}
+                role="guard"
+                properties={properties}
+            />
         </div>
     );
 }

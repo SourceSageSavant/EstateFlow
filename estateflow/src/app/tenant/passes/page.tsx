@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import Modal from '@/components/ui/Modal';
+import toast from 'react-hot-toast';
 import {
     Key,
     Plus,
@@ -15,6 +16,7 @@ import {
     Trash2,
     Calendar,
     User,
+    Share2,
 } from 'lucide-react';
 
 export default function PassesPage() {
@@ -85,19 +87,21 @@ export default function PassesPage() {
 
     const copyCode = (code: string) => {
         navigator.clipboard.writeText(code);
-        alert('Code copied!');
+        toast.success('Code copied!');
     };
 
     const getStatusColor = (status: string, validUntil: string) => {
-        if (status === 'revoked') return 'bg-red-100 text-red-700';
-        if (status === 'used') return 'bg-slate-100 text-slate-600';
+        if (status === 'cancelled') return 'bg-red-100 text-red-700';
+        if (status === 'checked_out') return 'bg-slate-100 text-slate-600';
+        if (status === 'checked_in') return 'bg-blue-100 text-blue-700';
         if (new Date(validUntil) < new Date()) return 'bg-amber-100 text-amber-700';
         return 'bg-green-100 text-green-700';
     };
 
     const getStatusLabel = (status: string, validUntil: string) => {
-        if (status === 'revoked') return 'Revoked';
-        if (status === 'used') return 'Used';
+        if (status === 'cancelled') return 'Cancelled';
+        if (status === 'checked_out') return 'Checked Out';
+        if (status === 'checked_in') return 'Checked In';
         if (new Date(validUntil) < new Date()) return 'Expired';
         return 'Active';
     };
@@ -137,7 +141,7 @@ export default function PassesPage() {
                         <div>
                             <p className="text-sm text-slate-500">Active Passes</p>
                             <p className="text-xl font-bold text-slate-900">
-                                {passes.filter(p => p.status === 'active' && new Date(p.valid_until) > new Date()).length}
+                                {passes.filter(p => p.status === 'pending' && new Date(p.valid_until) > new Date()).length}
                             </p>
                         </div>
                     </div>
@@ -150,7 +154,7 @@ export default function PassesPage() {
                         <div>
                             <p className="text-sm text-slate-500">Used Passes</p>
                             <p className="text-xl font-bold text-slate-900">
-                                {passes.filter(p => p.status === 'used').length}
+                                {passes.filter(p => p.status === 'checked_in' || p.status === 'checked_out').length}
                             </p>
                         </div>
                     </div>
@@ -163,7 +167,7 @@ export default function PassesPage() {
                         <div>
                             <p className="text-sm text-slate-500">Expired/Revoked</p>
                             <p className="text-xl font-bold text-slate-900">
-                                {passes.filter(p => p.status === 'revoked' || new Date(p.valid_until) < new Date()).length}
+                                {passes.filter(p => p.status === 'cancelled' || p.status === 'expired' || new Date(p.valid_until) < new Date()).length}
                             </p>
                         </div>
                     </div>
@@ -227,11 +231,11 @@ export default function PassesPage() {
                                     >
                                         <QrCode size={18} />
                                     </button>
-                                    {pass.status === 'active' && new Date(pass.valid_until) > new Date() && (
+                                    {pass.status === 'pending' && new Date(pass.valid_until) > new Date() && (
                                         <button
                                             onClick={() => revokePass(pass.id)}
                                             className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                                            title="Revoke"
+                                            title="Cancel"
                                         >
                                             <Trash2 size={18} />
                                         </button>
@@ -261,22 +265,47 @@ export default function PassesPage() {
             >
                 {selectedPass && (
                     <div className="text-center">
-                        <div className="w-48 h-48 bg-slate-100 rounded-xl flex items-center justify-center mx-auto mb-4">
-                            <div className="text-center">
-                                <QrCode className="text-slate-300 mx-auto mb-2" size={64} />
-                                <p className="text-3xl font-mono font-bold text-slate-900">{selectedPass.access_code}</p>
+                        {selectedPass.qr_data ? (
+                            <img
+                                src={selectedPass.qr_data}
+                                alt="QR Code"
+                                className="w-48 h-48 mx-auto mb-4 rounded-xl"
+                            />
+                        ) : (
+                            <div className="w-48 h-48 bg-slate-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                                <div className="text-center">
+                                    <QrCode className="text-slate-300 mx-auto mb-2" size={64} />
+                                    <p className="text-3xl font-mono font-bold text-slate-900">{selectedPass.access_code}</p>
+                                </div>
                             </div>
-                        </div>
+                        )}
+                        <p className="text-2xl font-mono font-bold text-indigo-600 mb-2">{selectedPass.access_code}</p>
                         <p className="text-slate-600">Share this code with <strong>{selectedPass.visitor_name}</strong></p>
                         <p className="text-sm text-slate-500 mt-1">
                             Valid until {new Date(selectedPass.valid_until).toLocaleString()}
                         </p>
-                        <button
-                            onClick={() => copyCode(selectedPass.access_code)}
-                            className="mt-4 w-full py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-                        >
-                            Copy Code
-                        </button>
+                        <div className="flex gap-2 mt-4">
+                            <button
+                                onClick={() => copyCode(selectedPass.access_code)}
+                                className="flex-1 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center justify-center gap-2"
+                            >
+                                <Copy size={18} />
+                                Copy Code
+                            </button>
+                            {navigator.share && (
+                                <button
+                                    onClick={() => {
+                                        navigator.share({
+                                            title: 'Gate Pass',
+                                            text: `Your access code is: ${selectedPass.access_code}. Valid until ${new Date(selectedPass.valid_until).toLocaleString()}`,
+                                        });
+                                    }}
+                                    className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200"
+                                >
+                                    <Share2 size={18} />
+                                </button>
+                            )}
+                        </div>
                     </div>
                 )}
             </Modal>
