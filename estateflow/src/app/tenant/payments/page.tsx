@@ -11,12 +11,16 @@ import {
     Loader2,
     DollarSign,
     AlertCircle,
+    Smartphone,
 } from 'lucide-react';
+import PaymentModal from '@/components/PaymentModal';
 
 export default function TenantPaymentsPage() {
     const [payments, setPayments] = useState<any[]>([]);
     const [unit, setUnit] = useState<any>(null);
+    const [profile, setProfile] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
     const supabase = createClient();
 
     useEffect(() => {
@@ -27,10 +31,19 @@ export default function TenantPaymentsPage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
+        // Get profile for phone number
+        const { data: profileData } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+        setProfile(profileData);
+
         // Get unit info
         const { data: unitData } = await supabase
             .from('units')
-            .select('*, properties(name)')
+            .select('*, properties(id, name)')
             .eq('current_tenant_id', user.id)
             .single();
 
@@ -63,6 +76,18 @@ export default function TenantPaymentsPage() {
             case 'failed': return 'bg-red-100 text-red-700';
             default: return 'bg-slate-100 text-slate-600';
         }
+    };
+
+    // Get current payment period (e.g., "2026-02")
+    const getCurrentPaymentPeriod = () => {
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    };
+
+    const handlePaymentComplete = () => {
+        setShowPaymentModal(false);
+        // Refresh payment data
+        fetchData();
     };
 
     if (loading) {
@@ -140,17 +165,24 @@ export default function TenantPaymentsPage() {
             </div>
 
             {/* Make Payment Button */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200 p-6">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div>
-                        <h3 className="font-semibold text-slate-900">Ready to pay your rent?</h3>
-                        <p className="text-slate-500 text-sm">Pay securely via M-Pesa or card</p>
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
+                            <Smartphone className="text-white" size={24} />
+                        </div>
+                        <div>
+                            <h3 className="font-semibold text-slate-900">Ready to pay your rent?</h3>
+                            <p className="text-slate-600 text-sm">Pay securely via M-Pesa STK Push</p>
+                        </div>
                     </div>
                     <button
-                        className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
-                        onClick={() => alert('Payment integration coming soon!')}
+                        onClick={() => setShowPaymentModal(true)}
+                        disabled={!unit}
+                        className="px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 font-medium flex items-center gap-2 disabled:opacity-50"
                     >
-                        Pay Now
+                        <Smartphone size={20} />
+                        Pay with M-Pesa
                     </button>
                 </div>
             </div>
@@ -191,6 +223,20 @@ export default function TenantPaymentsPage() {
                     </div>
                 )}
             </div>
+
+            {/* Payment Modal */}
+            {unit && (
+                <PaymentModal
+                    isOpen={showPaymentModal}
+                    onClose={handlePaymentComplete}
+                    propertyId={unit.properties?.id || unit.property_id}
+                    unitId={unit.id}
+                    amount={unit.rent_amount || 0}
+                    paymentPeriod={getCurrentPaymentPeriod()}
+                    tenantPhone={profile?.phone_number || ''}
+                />
+            )}
         </div>
     );
 }
+
