@@ -2,32 +2,80 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, Lock, CheckCircle, XCircle, Eye, EyeOff } from 'lucide-react';
 
 export default function ResetPasswordPage() {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [sessionReady, setSessionReady] = useState(false);
     const router = useRouter();
+    const searchParams = useSearchParams();
     const supabase = createClient();
 
     useEffect(() => {
-        // Check if we have a valid session from the reset link
-        const checkSession = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-                setSessionReady(true);
+        // Handle the code exchange from email link
+        const handleCodeExchange = async () => {
+            // Check for code in URL (from email link)
+            const code = searchParams.get('code');
+
+            if (code) {
+                try {
+                    // Exchange the code for a session
+                    const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+                    if (error) {
+                        console.error('Code exchange error:', error);
+                        setMessage('Invalid or expired reset link. Please request a new one.');
+                        setLoading(false);
+                        return;
+                    }
+
+                    setSessionReady(true);
+                    setLoading(false);
+                } catch (err) {
+                    console.error('Exchange error:', err);
+                    setMessage('Failed to verify reset link. Please try again.');
+                    setLoading(false);
+                }
             } else {
-                setMessage('Invalid or expired reset link. Please request a new one.');
+                // No code - check if we already have a session (from hash fragment)
+                const { data: { session } } = await supabase.auth.getSession();
+
+                if (session) {
+                    setSessionReady(true);
+                } else {
+                    // Check URL hash for token (Supabase sometimes uses hash)
+                    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+                    const accessToken = hashParams.get('access_token');
+
+                    if (accessToken) {
+                        // Set session from hash
+                        const { error } = await supabase.auth.setSession({
+                            access_token: accessToken,
+                            refresh_token: hashParams.get('refresh_token') || '',
+                        });
+
+                        if (!error) {
+                            setSessionReady(true);
+                        } else {
+                            setMessage('Invalid or expired reset link. Please request a new one.');
+                        }
+                    } else {
+                        setMessage('Invalid or expired reset link. Please request a new one.');
+                    }
+                }
+                setLoading(false);
             }
         };
-        checkSession();
-    }, []);
+
+        handleCodeExchange();
+    }, [searchParams]);
 
     const handleResetPassword = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -43,7 +91,7 @@ export default function ResetPasswordPage() {
             return;
         }
 
-        setLoading(true);
+        setSubmitting(true);
         setMessage(null);
 
         try {
@@ -55,7 +103,8 @@ export default function ResetPasswordPage() {
                 setMessage(error.message);
             } else {
                 setSuccess(true);
-                // Redirect to login after 3 seconds
+                // Sign out and redirect to login after 3 seconds
+                await supabase.auth.signOut();
                 setTimeout(() => {
                     router.push('/login');
                 }, 3000);
@@ -63,9 +112,21 @@ export default function ResetPasswordPage() {
         } catch (error) {
             setMessage('An unexpected error occurred');
         } finally {
-            setLoading(false);
+            setSubmitting(false);
         }
     };
+
+    // Loading state
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="text-center space-y-4">
+                    <Loader2 className="animate-spin h-8 w-8 text-indigo-600 mx-auto" />
+                    <p className="text-gray-600">Verifying reset link...</p>
+                </div>
+            </div>
+        );
+    }
 
     // Success state
     if (success) {
@@ -86,7 +147,7 @@ export default function ResetPasswordPage() {
     }
 
     // Error state - no valid session
-    if (!sessionReady && message) {
+    if (!sessionReady) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
                 <div className="max-w-md w-full text-center space-y-6 bg-white p-8 rounded-xl shadow-lg">
@@ -94,7 +155,7 @@ export default function ResetPasswordPage() {
                         <XCircle className="text-red-600" size={32} />
                     </div>
                     <h2 className="text-2xl font-bold text-gray-900">Link Expired</h2>
-                    <p className="text-gray-600">{message}</p>
+                    <p className="text-gray-600">{message || 'Invalid or expired reset link. Please request a new one.'}</p>
                     <button
                         onClick={() => router.push('/login')}
                         className="inline-block px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
@@ -102,15 +163,6 @@ export default function ResetPasswordPage() {
                         Back to Login
                     </button>
                 </div>
-            </div>
-        );
-    }
-
-    // Loading state
-    if (!sessionReady) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <Loader2 className="animate-spin h-8 w-8 text-indigo-600" />
             </div>
         );
     }
@@ -181,10 +233,10 @@ export default function ResetPasswordPage() {
 
                     <button
                         type="submit"
-                        disabled={loading || !password || !confirmPassword}
+                        disabled={submitting || !password || !confirmPassword}
                         className="w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
                     >
-                        {loading ? <Loader2 className="animate-spin h-5 w-5" /> : 'Reset Password'}
+                        {submitting ? <Loader2 className="animate-spin h-5 w-5" /> : 'Reset Password'}
                     </button>
                 </form>
             </div>
