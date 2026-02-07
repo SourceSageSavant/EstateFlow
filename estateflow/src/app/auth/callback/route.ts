@@ -6,6 +6,8 @@ import type { Database } from '@/types/database.types';
 export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url)
     const code = searchParams.get('code')
+    // if "next" is in param, use it as the redirect URL
+    const next = searchParams.get('next') ?? '/'
 
     if (code) {
         const cookieStore = await cookies()
@@ -19,7 +21,7 @@ export async function GET(request: Request) {
                     },
                     setAll(cookiesToSet) {
                         try {
-                            cookiesToSet.forEach(({ name, value, ...options }) =>
+                            cookiesToSet.forEach(({ name, value, options }) =>
                                 cookieStore.set(name, value, options)
                             )
                         } catch {
@@ -35,9 +37,13 @@ export async function GET(request: Request) {
 
         if (error) {
             console.error('Auth callback error:', error)
-            // Could redirect to an error page
+            return NextResponse.redirect(`${origin}/auth/auth-code-error`)
         }
     }
 
-    return NextResponse.redirect(origin)
+    if (next.startsWith('http')) {
+        return NextResponse.redirect(next)
+    }
+
+    return NextResponse.redirect(`${origin}${next}`)
 }

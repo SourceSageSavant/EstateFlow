@@ -34,8 +34,24 @@ function ResetPasswordContent() {
     useEffect(() => {
         // Handle the code exchange from email link
         const handleCodeExchange = async () => {
-            // Check for code in URL (from email link)
+            // First check if we already have a session (e.g. from auth/callback exchange)
+            const { data: { session } } = await supabase.auth.getSession();
+
+            if (session) {
+                setSessionReady(true);
+                setLoading(false);
+                return;
+            }
+
+            // Check for code in URL (direct access or error cases)
             const code = searchParams.get('code');
+            const errorDescription = searchParams.get('error_description');
+
+            if (errorDescription) {
+                setMessage(errorDescription.replace(/\+/g, ' '));
+                setLoading(false);
+                return;
+            }
 
             if (code) {
                 try {
@@ -44,7 +60,7 @@ function ResetPasswordContent() {
 
                     if (error) {
                         console.error('Code exchange error:', error);
-                        setMessage('Invalid or expired reset link. Please request a new one.');
+                        setMessage(error.message || 'Invalid or expired reset link.');
                         setLoading(false);
                         return;
                     }
@@ -57,31 +73,24 @@ function ResetPasswordContent() {
                     setLoading(false);
                 }
             } else {
-                // No code - check if we already have a session (from hash fragment)
-                const { data: { session } } = await supabase.auth.getSession();
+                // Check URL hash for token (Supabase sometimes uses hash)
+                const hashParams = new URLSearchParams(window.location.hash.substring(1));
+                const accessToken = hashParams.get('access_token');
 
-                if (session) {
-                    setSessionReady(true);
-                } else {
-                    // Check URL hash for token (Supabase sometimes uses hash)
-                    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-                    const accessToken = hashParams.get('access_token');
+                if (accessToken) {
+                    // Set session from hash
+                    const { error } = await supabase.auth.setSession({
+                        access_token: accessToken,
+                        refresh_token: hashParams.get('refresh_token') || '',
+                    });
 
-                    if (accessToken) {
-                        // Set session from hash
-                        const { error } = await supabase.auth.setSession({
-                            access_token: accessToken,
-                            refresh_token: hashParams.get('refresh_token') || '',
-                        });
-
-                        if (!error) {
-                            setSessionReady(true);
-                        } else {
-                            setMessage('Invalid or expired reset link. Please request a new one.');
-                        }
+                    if (!error) {
+                        setSessionReady(true);
                     } else {
                         setMessage('Invalid or expired reset link. Please request a new one.');
                     }
+                } else {
+                    setMessage('Invalid or expired reset link. Please request a new one.');
                 }
                 setLoading(false);
             }
