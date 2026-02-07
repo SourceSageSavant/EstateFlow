@@ -17,6 +17,7 @@ import {
     LogIn,
     LogOut,
     FileText,
+    MapPin,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -129,17 +130,51 @@ export default function GuardVerifyPage() {
         if (!verifyResult?.pass?.id) return;
 
         setCheckingIn(true);
+        let location = null;
+
+        // Try to get location
+        if (navigator.geolocation) {
+            const toastId = toast.loading('Getting location...');
+            try {
+                const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject, {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0
+                    });
+                });
+                location = {
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude,
+                    accuracy: position.coords.accuracy
+                };
+                toast.dismiss(toastId);
+            } catch (error) {
+                console.error('Location error:', error);
+                toast.dismiss(toastId);
+                toast('Location access denied. Proceeding without it (check-in might fail if geofence is active).', {
+                    icon: '📍',
+                });
+            }
+        } else {
+            toast('GPS not supported on this device', { icon: '⚠️' });
+        }
+
         try {
             const response = await fetch('/api/passes/checkin', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ passId: verifyResult.pass.id }),
+                body: JSON.stringify({
+                    passId: verifyResult.pass.id,
+                    location
+                }),
             });
 
             const data = await response.json();
 
             if (data.success) {
                 toast.success('Visitor checked in!');
+                if (navigator.vibrate) navigator.vibrate(200);
                 setStats(prev => ({ ...prev, today: prev.today + 1 }));
                 setVerifyResult(null);
                 setCode('');
@@ -156,6 +191,7 @@ export default function GuardVerifyPage() {
                 setRecentVerifications(prev => [newEntry, ...prev.slice(0, 9)]);
             } else {
                 toast.error(data.error || 'Check-in failed');
+                if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
             }
         } catch (error) {
             toast.error('Check-in failed');
@@ -351,7 +387,10 @@ export default function GuardVerifyPage() {
                                                             ) : (
                                                                 <>
                                                                     <LogIn size={20} />
-                                                                    CHECK IN
+                                                                    <span className="flex flex-col items-start leading-none">
+                                                                        <span>CHECK IN</span>
+                                                                        {navigator.geolocation && <span className="text-[10px] opacity-75 font-normal">Verifying Location...</span>}
+                                                                    </span>
                                                                 </>
                                                             )}
                                                         </button>

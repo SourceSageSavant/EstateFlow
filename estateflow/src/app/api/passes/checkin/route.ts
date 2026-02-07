@@ -2,6 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 
+// Haversine formula to calculate distance in meters
+function getDistanceInMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
+    const R = 6371e3; // Earth radius in meters
+    const phi1 = lat1 * Math.PI / 180;
+    const phi2 = lat2 * Math.PI / 180;
+    const deltaPhi = (lat2 - lat1) * Math.PI / 180;
+    const deltaLambda = (lon2 - lon1) * Math.PI / 180;
+
+    const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+        Math.cos(phi1) * Math.cos(phi2) *
+        Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c;
+}
+
 export async function POST(request: NextRequest) {
     try {
         const cookieStore = await cookies();
@@ -36,11 +52,20 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Pass ID is required' }, { status: 400 });
         }
 
-        // Get the pass
+        // Get the pass and associated property
         // @ts-ignore - gate_passes table not in types yet
         const { data: pass, error: passError } = await supabase
             .from('gate_passes')
-            .select('*')
+            .select(`
+                *,
+                properties (
+                    id,
+                    name,
+                    latitude,
+                    longitude,
+                    geofence_radius
+                )
+            `)
             .eq('id', passId)
             .single();
 
@@ -62,6 +87,29 @@ export async function POST(request: NextRequest) {
 
         if (pass.status === 'checked_in') {
             return NextResponse.json({ error: 'Visitor is already checked in' }, { status: 400 });
+        }
+
+        // Geofencing Check
+        // Only run if property has coordinates set and client sent location
+        // @ts-ignore
+        if (pass.properties?.latitude && pass.properties?.longitude && location?.latitude && location?.longitude) {
+            const distance = getDistanceInMeters(
+                location.latitude,
+                location.longitude,
+                // @ts-ignore
+                pass.properties.latitude,
+                // @ts-ignore
+                pass.properties.longitude
+            );
+
+            // @ts-ignore
+            const radius = pass.properties.geofence_radius || 100; // Default 100m
+
+            if (distance > radius) {
+                return NextResponse.json({
+                    error: `You are too far from the gate (${Math.round(distance)}m away). Max allowed: ${radius}m.`
+                }, { status: 403 });
+            }
         }
 
         // Update pass to checked in

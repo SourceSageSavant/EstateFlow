@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import InviteModal from '@/components/InviteModal';
+import toast from 'react-hot-toast';
 import {
     Users,
     Plus,
@@ -17,6 +18,7 @@ import {
     Edit,
     Trash2,
     Send,
+    MessageCircle,
 } from 'lucide-react';
 
 export default function TenantsPage() {
@@ -42,14 +44,14 @@ export default function TenantsPage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
+        // Get tenants with their assigned units
         const { data: tenantData } = await supabase
             .from('profiles')
             .select('*')
             .eq('role', 'tenant')
             .order('created_at', { ascending: false });
 
-        setTenants(tenantData || []);
-
+        // Get units with tenant assignments to link tenants to units
         const { data: propertyData } = await supabase
             .from('properties')
             .select('id, name')
@@ -57,17 +59,35 @@ export default function TenantsPage() {
 
         setProperties(propertyData || []);
 
+        // Get all units with tenant info
+        let allUnits: any[] = [];
         if (propertyData && propertyData.length > 0) {
             const propertyIds = propertyData.map((p: any) => p.id);
             const { data: unitData } = await supabase
                 .from('units')
                 .select('*, properties(name)')
-                .in('property_id', propertyIds)
-                .is('current_tenant_id', null);
+                .in('property_id', propertyIds);
 
-            setUnits(unitData || []);
+            allUnits = unitData || [];
+
+            // Get vacant units for assignment
+            const vacantUnits = allUnits.filter(u => !u.current_tenant_id);
+            setUnits(vacantUnits);
         }
 
+        // Enrich tenant data with unit info
+        const enrichedTenants = (tenantData || []).map(tenant => {
+            const assignedUnit = allUnits.find(u => u.current_tenant_id === tenant.id);
+            return {
+                ...tenant,
+                unit_id: assignedUnit?.id,
+                unit_number: assignedUnit?.unit_number,
+                property_name: assignedUnit?.properties?.name,
+                rent_amount: assignedUnit?.rent_amount,
+            };
+        });
+
+        setTenants(enrichedTenants);
         setLoading(false);
     };
 
@@ -102,6 +122,48 @@ export default function TenantsPage() {
         setSelectedTenant(tenant);
         setShowAssignModal(true);
         setShowMenu(null);
+    };
+
+    const handleSendReminder = async (tenant: any) => {
+        setShowMenu(null);
+
+        if (!tenant.phone_number && !tenant.phone) {
+            toast.error('Tenant has no phone number');
+            return;
+        }
+
+        if (!tenant.unit_id) {
+            toast.error('Tenant is not assigned to a unit');
+            return;
+        }
+
+        const loadingToast = toast.loading('Generating reminder...');
+
+        try {
+            const response = await fetch('/api/whatsapp/reminder', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    tenantId: tenant.id,
+                    unitId: tenant.unit_id,
+                    type: 'reminder',
+                }),
+            });
+
+            const data = await response.json();
+
+            if (data.success && data.whatsappLink) {
+                toast.dismiss(loadingToast);
+                toast.success('Opening WhatsApp...');
+                window.open(data.whatsappLink, '_blank');
+            } else {
+                toast.dismiss(loadingToast);
+                toast.error(data.error || 'Failed to generate reminder');
+            }
+        } catch (error) {
+            toast.dismiss(loadingToast);
+            toast.error('Failed to send reminder');
+        }
     };
 
     if (loading) {
@@ -274,6 +336,15 @@ export default function TenantsPage() {
                                                             <Trash2 size={16} />
                                                             Delete
                                                         </button>
+                                                        {tenant.unit_id && (tenant.phone_number || tenant.phone) && (
+                                                            <button
+                                                                onClick={() => handleSendReminder(tenant)}
+                                                                className="w-full px-4 py-2 text-left text-sm text-green-600 hover:bg-green-50 flex items-center gap-2"
+                                                            >
+                                                                <MessageCircle size={16} />
+                                                                Send Reminder
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 )}
                                             </div>

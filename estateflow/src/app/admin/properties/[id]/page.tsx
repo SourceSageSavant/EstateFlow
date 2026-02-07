@@ -98,9 +98,42 @@ export default function PropertyDetailsPage() {
                                 <MapPin size={16} />
                                 {property.address}
                             </p>
+                            {property.latitude && property.longitude && (
+                                <p className="text-xs text-green-600 flex items-center gap-1 mt-2 bg-green-50 px-2 py-1 rounded-lg w-fit">
+                                    <MapPin size={12} />
+                                    Geofence Active ({property.latitude.toFixed(6)}, {property.longitude.toFixed(6)})
+                                </p>
+                            )}
                         </div>
                     </div>
                     <div className="flex gap-2">
+                        <button
+                            onClick={() => {
+                                if (confirm('Update property location to your current position?')) {
+                                    navigator.geolocation.getCurrentPosition(async (position) => {
+                                        const { latitude, longitude } = position.coords;
+                                        const { error } = await supabase
+                                            .from('properties')
+                                            .update({ latitude, longitude })
+                                            .eq('id', property.id);
+
+                                        if (error) {
+                                            alert('Failed to update location');
+                                        } else {
+                                            alert('Location updated successfully');
+                                            fetchData();
+                                        }
+                                    }, (error) => {
+                                        console.error(error);
+                                        alert('Could not get your location. Please enable GPS.');
+                                    }, { enableHighAccuracy: true });
+                                }
+                            }}
+                            className="inline-flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white text-slate-700 rounded-lg hover:bg-slate-50"
+                        >
+                            <MapPin size={18} />
+                            Set Location
+                        </button>
                         <Link
                             href={`/admin/properties/${property.id}/units`}
                             className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
