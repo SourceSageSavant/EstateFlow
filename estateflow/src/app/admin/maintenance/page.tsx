@@ -31,16 +31,19 @@ export default function MaintenancePage() {
 
     const fetchData = async () => {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user) {
+            setLoading(false);
+            return;
+        }
 
         // Get properties owned by landlord
         const { data: propertyData } = await supabase
             .from('properties')
             .select('id')
-            .eq('owner_id', user.id);
+            .eq('landlord_id', user.id);
 
         if (propertyData && propertyData.length > 0) {
-            const propertyIds = propertyData.map(p => p.id);
+            const propertyIds = (propertyData as any[] || []).map((p: any) => p.id);
 
             // Get units
             const { data: unitData } = await supabase
@@ -49,7 +52,7 @@ export default function MaintenancePage() {
                 .in('property_id', propertyIds);
 
             if (unitData && unitData.length > 0) {
-                const unitIds = unitData.map(u => u.id);
+                const unitIds = (unitData as any[] || []).map((u: any) => u.id);
 
                 // Get maintenance requests
                 const { data: requestData } = await supabase
@@ -66,9 +69,9 @@ export default function MaintenancePage() {
     };
 
     const updateStatus = async (requestId: string, newStatus: string) => {
-        await supabase
-            .from('maintenance_requests')
-            .update({ status: newStatus })
+        await (supabase
+            .from('maintenance_requests') as any)
+            .update({ status: newStatus } as any)
             .eq('id', requestId);
 
         setRequests(requests.map(r =>
@@ -202,7 +205,7 @@ export default function MaintenancePage() {
                                 className="p-4 sm:p-6 hover:bg-slate-50 cursor-pointer flex items-center gap-4"
                             >
                                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${request.priority === 'emergency' ? 'bg-red-100' :
-                                        request.priority === 'high' ? 'bg-amber-100' : 'bg-slate-100'
+                                    request.priority === 'high' ? 'bg-amber-100' : 'bg-slate-100'
                                     }`}>
                                     <Wrench className={
                                         request.priority === 'emergency' ? 'text-red-600' :
@@ -232,9 +235,9 @@ export default function MaintenancePage() {
 
                                 <div className="text-right">
                                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${request.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                                            request.status === 'completed' ? 'bg-green-100 text-green-700' :
-                                                request.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                                                    'bg-blue-100 text-blue-700'
+                                        request.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                            request.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                                                'bg-blue-100 text-blue-700'
                                         }`}>
                                         {request.status.replace('_', ' ')}
                                     </span>
@@ -269,8 +272,8 @@ function RequestDetailModal({ request, onClose, onUpdateStatus }: { request: any
 
     const saveNotes = async () => {
         setSaving(true);
-        await supabase
-            .from('maintenance_requests')
+        await (supabase
+            .from('maintenance_requests') as any)
             .update({ landlord_notes: notes })
             .eq('id', request.id);
         setSaving(false);
@@ -314,8 +317,8 @@ function RequestDetailModal({ request, onClose, onUpdateStatus }: { request: any
                             <div>
                                 <p className="text-sm text-slate-500 mb-1">Priority</p>
                                 <span className={`px-2 py-1 rounded text-xs font-medium capitalize ${request.priority === 'emergency' ? 'bg-red-100 text-red-700' :
-                                        request.priority === 'high' ? 'bg-amber-100 text-amber-700' :
-                                            'bg-slate-100 text-slate-700'
+                                    request.priority === 'high' ? 'bg-amber-100 text-amber-700' :
+                                        'bg-slate-100 text-slate-700'
                                     }`}>
                                     {request.priority}
                                 </span>
@@ -336,8 +339,8 @@ function RequestDetailModal({ request, onClose, onUpdateStatus }: { request: any
                                     key={option.value}
                                     onClick={() => onUpdateStatus(request.id, option.value)}
                                     className={`py-2 px-3 rounded-lg text-sm font-medium transition-colors ${request.status === option.value
-                                            ? `${option.color} text-white`
-                                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                        ? `${option.color} text-white`
+                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                                         }`}
                                 >
                                     {option.label}

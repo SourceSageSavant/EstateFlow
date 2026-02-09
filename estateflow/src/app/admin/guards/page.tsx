@@ -42,7 +42,10 @@ export default function GuardsPage() {
 
     const fetchData = async () => {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user) {
+            setLoading(false);
+            return;
+        }
 
         const { data: guardData } = await supabase
             .from('profiles')
@@ -55,12 +58,12 @@ export default function GuardsPage() {
         const { data: propertyData } = await supabase
             .from('properties')
             .select('*')
-            .eq('owner_id', user.id);
+            .eq('landlord_id', user.id);
 
         setProperties(propertyData || []);
 
         const { data: assignmentData } = await supabase
-            .from('property_guards')
+            .from('guard_assignments')
             .select('*, profiles(full_name), properties(name)')
             .eq('is_active', true);
 

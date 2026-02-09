@@ -42,7 +42,10 @@ export default function TenantsPage() {
 
     const fetchData = async () => {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user) {
+            setLoading(false);
+            return;
+        }
 
         // Get tenants with their assigned units
         const { data: tenantData } = await supabase
