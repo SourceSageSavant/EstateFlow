@@ -26,13 +26,24 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const { email, role, propertyId, unitId, fullName, phoneNumber } = body;
 
-        // Validate required fields
-        if (!email || !role || !propertyId) {
+        // Validate required fields (email OR phone required)
+        if (!role || !propertyId) {
             return NextResponse.json(
-                { error: 'Missing required fields: email, role, propertyId' },
+                { error: 'Missing required fields: role, propertyId' },
                 { status: 400 }
             );
         }
+
+        // Require at least email or phone
+        if (!email && !phoneNumber) {
+            return NextResponse.json(
+                { error: 'Either email or phone number is required' },
+                { status: 400 }
+            );
+        }
+
+        // For phone-only invites, generate a placeholder email
+        const inviteEmail = email || `phone-${phoneNumber.replace(/[^0-9]/g, '')}@noemail.estateflow.local`;
 
         // Validate role
         if (!['tenant', 'guard'].includes(role)) {
@@ -45,23 +56,27 @@ export async function POST(request: NextRequest) {
         // Verify property belongs to landlord
         const { data: property } = await supabase
             .from('properties')
-            .select('id, name, owner_id, landlord_id')
+            .select('id, name, landlord_id')
             .eq('id', propertyId)
             .single();
 
-        if (!property || (property.owner_id !== user.id && property.landlord_id !== user.id)) {
+        if (!property || property.landlord_id !== user.id) {
             return NextResponse.json(
                 { error: 'Property not found or access denied' },
                 { status: 404 }
             );
         }
 
-        // Check if user already exists
-        const { data: existingProfile } = await supabase
-            .from('profiles')
-            .select('id, email')
-            .eq('email', email)
-            .single();
+        // Check if user already exists (by phone since profiles email might not exist/be reliable)
+        let existingProfile = null;
+        if (phoneNumber) {
+            const { data } = await supabase
+                .from('profiles')
+                .select('id, phone_number')
+                .eq('phone_number', phoneNumber)
+                .single();
+            existingProfile = data;
+        }
 
         if (existingProfile) {
             return NextResponse.json(
@@ -74,7 +89,7 @@ export async function POST(request: NextRequest) {
         const { data: existingInvite } = await supabase
             .from('invitations')
             .select('id, status')
-            .eq('email', email)
+            .eq('email', inviteEmail)
             .eq('status', 'pending')
             .single();
 
@@ -93,7 +108,7 @@ export async function POST(request: NextRequest) {
         const { data: invitation, error: insertError } = await supabase
             .from('invitations')
             .insert({
-                email,
+                email: inviteEmail,
                 role,
                 property_id: propertyId,
                 unit_id: unitId || null,
@@ -137,7 +152,8 @@ export async function POST(request: NextRequest) {
                 success: true,
                 invitation: {
                     id: invitation.id,
-                    email,
+                    email: email || null,
+                    phone: phoneNumber || null,
                     role,
                     token,
                     inviteUrl,

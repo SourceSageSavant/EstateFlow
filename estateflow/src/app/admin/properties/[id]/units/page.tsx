@@ -47,7 +47,7 @@ export default function UnitsPage() {
 
         const { data: unitsData } = await supabase
             .from('units')
-            .select('*, current_tenant:profiles(id, full_name, email, phone)')
+            .select('*, current_tenant:profiles(id, full_name, phone_number)')
             .eq('property_id', params.id)
             .order('unit_number');
 
@@ -196,8 +196,8 @@ export default function UnitsPage() {
                                     <div>
                                         <p className="font-semibold text-slate-900">Unit {unit.unit_number}</p>
                                         <span className={`text-xs px-2 py-0.5 rounded-full ${unit.current_tenant_id
-                                                ? 'bg-green-100 text-green-700'
-                                                : 'bg-amber-100 text-amber-700'
+                                            ? 'bg-green-100 text-green-700'
+                                            : 'bg-amber-100 text-amber-700'
                                             }`}>
                                             {unit.current_tenant_id ? 'Occupied' : 'Vacant'}
                                         </span>
@@ -263,7 +263,9 @@ export default function UnitsPage() {
                                 <div className="mt-4 pt-4 border-t border-slate-100">
                                     <p className="text-xs text-slate-500 mb-1">Current Tenant:</p>
                                     <p className="font-medium text-slate-900">{unit.current_tenant.full_name}</p>
-                                    <p className="text-xs text-slate-500">{unit.current_tenant.email}</p>
+                                    {unit.current_tenant.phone_number && (
+                                        <p className="text-xs text-slate-500">{unit.current_tenant.phone_number}</p>
+                                    )}
                                 </div>
                             )}
 
@@ -378,6 +380,7 @@ function UnitForm({ propertyId, unit, onSaved }: { propertyId: string; unit?: an
     const [rentAmount, setRentAmount] = useState(unit?.rent_amount?.toString() || '');
     const [rentDueDay, setRentDueDay] = useState(unit?.rent_due_day?.toString() || '1');
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const supabase = createClient();
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -392,9 +395,18 @@ function UnitForm({ propertyId, unit, onSaved }: { propertyId: string; unit?: an
         };
 
         if (unit) {
-            await supabase.from('units').update(data).eq('id', unit.id);
+            const { error: updateError } = await supabase.from('units').update(data).eq('id', unit.id);
+            if (updateError) throw updateError;
         } else {
-            await supabase.from('units').insert(data);
+            const { error: insertError } = await supabase.from('units').insert(data);
+            if (insertError) {
+                if (insertError.code === '23505' || insertError.message.includes('unique')) {
+                    setError('A unit with this number already exists in this property.');
+                    setLoading(false);
+                    return;
+                }
+                throw insertError;
+            }
         }
 
         onSaved();
@@ -437,6 +449,13 @@ function UnitForm({ propertyId, unit, onSaved }: { propertyId: string; unit?: an
                     ))}
                 </select>
             </div>
+
+            {error && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
+                    {error}
+                </div>
+            )}
+
             <button
                 type="submit"
                 disabled={loading}

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
+import Modal from '@/components/ui/Modal';
 import toast from 'react-hot-toast';
 import {
     FileText,
@@ -53,7 +54,6 @@ export default function LeasesPage() {
                 ),
                 profiles (
                     full_name,
-                    email,
                     phone_number
                 )
             `)
@@ -326,117 +326,114 @@ export default function LeasesPage() {
 
 function LeaseDetailModal({ lease, onClose }: { lease: any; onClose: () => void }) {
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                <div className="flex items-center justify-between p-6 border-b border-slate-200">
-                    <h2 className="text-xl font-bold text-slate-900">Lease Details</h2>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
-                        <X size={24} />
+        <Modal
+            isOpen={true}
+            onClose={onClose}
+            title="Lease Details"
+            maxWidth="max-w-2xl"
+        >
+
+            <div className="p-6 space-y-6">
+                {/* Tenant Info */}
+                <div className="bg-slate-50 rounded-xl p-4">
+                    <h3 className="font-semibold text-slate-700 mb-3">Tenant Information</h3>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <p className="text-slate-500">Name</p>
+                            <p className="font-medium text-slate-900">{lease.profiles?.full_name || 'N/A'}</p>
+                        </div>
+                        <div>
+                            <p className="text-slate-500">Email</p>
+                            <p className="font-medium text-slate-900">{lease.profiles?.email || 'N/A'}</p>
+                        </div>
+                        <div>
+                            <p className="text-slate-500">Phone</p>
+                            <p className="font-medium text-slate-900">{lease.profiles?.phone_number || 'N/A'}</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Property Info */}
+                <div className="bg-slate-50 rounded-xl p-4">
+                    <h3 className="font-semibold text-slate-700 mb-3">Property Information</h3>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <p className="text-slate-500">Property</p>
+                            <p className="font-medium text-slate-900">{lease.units?.properties?.name || 'N/A'}</p>
+                        </div>
+                        <div>
+                            <p className="text-slate-500">Unit</p>
+                            <p className="font-medium text-slate-900">{lease.units?.unit_number || 'N/A'}</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Lease Terms */}
+                <div className="bg-slate-50 rounded-xl p-4">
+                    <h3 className="font-semibold text-slate-700 mb-3">Lease Terms</h3>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <p className="text-slate-500">Start Date</p>
+                            <p className="font-medium text-slate-900">
+                                {lease.start_date ? format(new Date(lease.start_date), 'PPP') : 'N/A'}
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-slate-500">End Date</p>
+                            <p className="font-medium text-slate-900">
+                                {lease.end_date ? format(new Date(lease.end_date), 'PPP') : 'N/A'}
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-slate-500">Monthly Rent</p>
+                            <p className="font-medium text-slate-900">KES {lease.rent_amount?.toLocaleString() || '0'}</p>
+                        </div>
+                        <div>
+                            <p className="text-slate-500">Security Deposit</p>
+                            <p className="font-medium text-slate-900">KES {lease.security_deposit?.toLocaleString() || '0'}</p>
+                        </div>
+                        <div>
+                            <p className="text-slate-500">Status</p>
+                            <p className="font-medium text-slate-900 capitalize">{lease.status?.replace('_', ' ') || 'N/A'}</p>
+                        </div>
+                        <div>
+                            <p className="text-slate-500">Signed At</p>
+                            <p className="font-medium text-slate-900">
+                                {lease.signed_at ? format(new Date(lease.signed_at), 'PPP') : 'Not signed'}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Terms Text */}
+                {lease.terms_text && (
+                    <div className="bg-slate-50 rounded-xl p-4">
+                        <h3 className="font-semibold text-slate-700 mb-3">Agreement Terms</h3>
+                        <pre className="text-sm text-slate-600 whitespace-pre-wrap font-sans max-h-48 overflow-y-auto">
+                            {lease.terms_text}
+                        </pre>
+                    </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex gap-3">
+                    {lease.pdf_url && (
+                        <button
+                            onClick={() => window.open(lease.pdf_url, '_blank')}
+                            className="flex-1 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 flex items-center justify-center gap-2"
+                        >
+                            <Download size={18} />
+                            Download PDF
+                        </button>
+                    )}
+                    <button
+                        onClick={onClose}
+                        className="flex-1 py-2 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50"
+                    >
+                        Close
                     </button>
                 </div>
-
-                <div className="p-6 space-y-6">
-                    {/* Tenant Info */}
-                    <div className="bg-slate-50 rounded-xl p-4">
-                        <h3 className="font-semibold text-slate-700 mb-3">Tenant Information</h3>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                                <p className="text-slate-500">Name</p>
-                                <p className="font-medium text-slate-900">{lease.profiles?.full_name || 'N/A'}</p>
-                            </div>
-                            <div>
-                                <p className="text-slate-500">Email</p>
-                                <p className="font-medium text-slate-900">{lease.profiles?.email || 'N/A'}</p>
-                            </div>
-                            <div>
-                                <p className="text-slate-500">Phone</p>
-                                <p className="font-medium text-slate-900">{lease.profiles?.phone_number || 'N/A'}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Property Info */}
-                    <div className="bg-slate-50 rounded-xl p-4">
-                        <h3 className="font-semibold text-slate-700 mb-3">Property Information</h3>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                                <p className="text-slate-500">Property</p>
-                                <p className="font-medium text-slate-900">{lease.units?.properties?.name || 'N/A'}</p>
-                            </div>
-                            <div>
-                                <p className="text-slate-500">Unit</p>
-                                <p className="font-medium text-slate-900">{lease.units?.unit_number || 'N/A'}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Lease Terms */}
-                    <div className="bg-slate-50 rounded-xl p-4">
-                        <h3 className="font-semibold text-slate-700 mb-3">Lease Terms</h3>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                                <p className="text-slate-500">Start Date</p>
-                                <p className="font-medium text-slate-900">
-                                    {lease.start_date ? format(new Date(lease.start_date), 'PPP') : 'N/A'}
-                                </p>
-                            </div>
-                            <div>
-                                <p className="text-slate-500">End Date</p>
-                                <p className="font-medium text-slate-900">
-                                    {lease.end_date ? format(new Date(lease.end_date), 'PPP') : 'N/A'}
-                                </p>
-                            </div>
-                            <div>
-                                <p className="text-slate-500">Monthly Rent</p>
-                                <p className="font-medium text-slate-900">KES {lease.rent_amount?.toLocaleString() || '0'}</p>
-                            </div>
-                            <div>
-                                <p className="text-slate-500">Security Deposit</p>
-                                <p className="font-medium text-slate-900">KES {lease.security_deposit?.toLocaleString() || '0'}</p>
-                            </div>
-                            <div>
-                                <p className="text-slate-500">Status</p>
-                                <p className="font-medium text-slate-900 capitalize">{lease.status?.replace('_', ' ') || 'N/A'}</p>
-                            </div>
-                            <div>
-                                <p className="text-slate-500">Signed At</p>
-                                <p className="font-medium text-slate-900">
-                                    {lease.signed_at ? format(new Date(lease.signed_at), 'PPP') : 'Not signed'}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Terms Text */}
-                    {lease.terms_text && (
-                        <div className="bg-slate-50 rounded-xl p-4">
-                            <h3 className="font-semibold text-slate-700 mb-3">Agreement Terms</h3>
-                            <pre className="text-sm text-slate-600 whitespace-pre-wrap font-sans max-h-48 overflow-y-auto">
-                                {lease.terms_text}
-                            </pre>
-                        </div>
-                    )}
-
-                    {/* Actions */}
-                    <div className="flex gap-3">
-                        {lease.pdf_url && (
-                            <button
-                                onClick={() => window.open(lease.pdf_url, '_blank')}
-                                className="flex-1 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 flex items-center justify-center gap-2"
-                            >
-                                <Download size={18} />
-                                Download PDF
-                            </button>
-                        )}
-                        <button
-                            onClick={onClose}
-                            className="flex-1 py-2 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50"
-                        >
-                            Close
-                        </button>
-                    </div>
-                </div>
             </div>
-        </div>
+        </Modal>
     );
 }

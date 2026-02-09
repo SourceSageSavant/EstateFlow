@@ -9,15 +9,25 @@ interface ModalProps {
     title: string;
     children: ReactNode;
     maxWidth?: string;
+    closeOnEscape?: boolean;
+    closeOnOutsideClick?: boolean;
 }
 
-export default function Modal({ isOpen, onClose, title, children, maxWidth = 'max-w-md' }: ModalProps) {
+export default function Modal({
+    isOpen,
+    onClose,
+    title,
+    children,
+    maxWidth = 'max-w-md',
+    closeOnEscape = true,
+    closeOnOutsideClick = true
+}: ModalProps) {
     const modalRef = useRef<HTMLDivElement>(null);
 
     // Handle Escape key
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && isOpen) {
+            if (e.key === 'Escape' && isOpen && closeOnEscape) {
                 onClose();
             }
         };
@@ -43,7 +53,7 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = 'ma
     return (
         <div
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            onClick={onClose}
+            onClick={() => closeOnOutsideClick && onClose()}
         >
             {/* Backdrop */}
             <div className="absolute inset-0 bg-black/50" />

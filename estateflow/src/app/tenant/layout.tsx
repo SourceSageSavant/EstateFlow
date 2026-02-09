@@ -37,7 +37,7 @@ export default function TenantLayout({
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
-        router.push('/login');
+        router.push('/');
     };
 
     return (
@@ -83,8 +83,8 @@ export default function TenantLayout({
                                     href={item.href}
                                     onClick={() => setIsOpen(false)}
                                     className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive
-                                            ? 'bg-indigo-600 text-white'
-                                            : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                                        ? 'bg-indigo-600 text-white'
+                                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                                         }`}
                                 >
                                     <Icon size={20} />

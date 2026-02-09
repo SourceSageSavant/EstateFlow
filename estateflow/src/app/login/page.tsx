@@ -21,7 +21,7 @@ export default function LoginPage() {
         setMessage(null);
 
         try {
-            const { error } = await supabase.auth.signInWithPassword({
+            const { data, error } = await supabase.auth.signInWithPassword({
                 email,
                 password,
             });
@@ -31,8 +31,24 @@ export default function LoginPage() {
                 return;
             }
 
+            // Fetch user profile to get role
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('role')
+                .eq('id', data.user.id)
+                .single();
+
+            const role = profile?.role || 'landlord';
+
+            // Redirect based on role
+            const dashboardMap: Record<string, string> = {
+                landlord: '/admin/dashboard',
+                tenant: '/tenant',
+                guard: '/guard'
+            };
+
             router.refresh();
-            router.push('/');
+            router.push(dashboardMap[role] || '/admin/dashboard');
         } catch (error) {
             setMessage('An unexpected error occurred');
         } finally {

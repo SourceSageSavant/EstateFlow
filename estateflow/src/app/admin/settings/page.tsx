@@ -675,12 +675,13 @@ export default function SettingsPage() {
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (value: boolean) => void }) {
     return (
         <button
+            type="button"
             onClick={() => onChange(!checked)}
-            className={`relative w-12 h-6 rounded-full transition-colors ${checked ? 'bg-indigo-600' : 'bg-slate-300'
+            className={`relative inline-flex items-center w-11 h-6 rounded-full transition-colors flex-shrink-0 ${checked ? 'bg-indigo-600' : 'bg-slate-300'
                 }`}
         >
             <span
-                className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${checked ? 'translate-x-7' : 'translate-x-1'
+                className={`inline-block w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'
                     }`}
             />
         </button>

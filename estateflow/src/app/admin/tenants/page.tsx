@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import InviteModal from '@/components/InviteModal';
+import Modal from '@/components/ui/Modal';
 import toast from 'react-hot-toast';
 import {
     Users,
@@ -58,7 +59,7 @@ export default function TenantsPage() {
         const { data: propertyData } = await supabase
             .from('properties')
             .select('id, name')
-            .or(`owner_id.eq.${user.id},landlord_id.eq.${user.id}`);
+            .eq('landlord_id', user.id);
 
         setProperties(propertyData || []);
 
@@ -486,56 +487,52 @@ function TenantModal({ title, tenant, onClose, onSubmit }: { title: string; tena
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-bold text-slate-900">{title}</h2>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg">
-                        <X size={20} />
-                    </button>
+        <Modal
+            isOpen={true}
+            onClose={onClose}
+            title={title}
+        >
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Full Name</label>
+                    <input
+                        type="text"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white text-slate-900 placeholder:text-slate-400"
+                        required
+                    />
                 </div>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">Full Name</label>
-                        <input
-                            type="text"
-                            value={fullName}
-                            onChange={(e) => setFullName(e.target.value)}
-                            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white text-slate-900 placeholder:text-slate-400"
-                            required
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">Email</label>
-                        <input
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white text-slate-900 placeholder:text-slate-400"
-                            required
-                            disabled={!!tenant}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">Phone</label>
-                        <input
-                            type="tel"
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
-                            placeholder="+254..."
-                            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white text-slate-900 placeholder:text-slate-400"
-                        />
-                    </div>
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                        {loading ? <Loader2 className="animate-spin" size={20} /> : tenant ? 'Save Changes' : <><UserPlus size={20} />Add Tenant</>}
-                    </button>
-                </form>
-            </div>
-        </div>
+                <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Email</label>
+                    <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white text-slate-900 placeholder:text-slate-400"
+                        required
+                        disabled={!!tenant}
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Phone</label>
+                    <input
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="+254..."
+                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white text-slate-900 placeholder:text-slate-400"
+                    />
+                </div>
+                <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                    {loading ? <Loader2 className="animate-spin" size={20} /> : tenant ? 'Save Changes' : <><UserPlus size={20} />Add Tenant</>}
+                </button>
+            </form>
+        </Modal>
     );
 }
 
@@ -561,47 +558,43 @@ function AssignUnitModal({ tenant, units, onClose, onAssigned }: { tenant: any; 
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-bold text-slate-900">Assign Unit</h2>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg">
-                        <X size={20} />
-                    </button>
+        <Modal
+            isOpen={true}
+            onClose={onClose}
+            title="Assign Unit"
+        >
+            <p className="text-slate-600 mb-4">
+                Assign <strong>{tenant.full_name}</strong> to a unit:
+            </p>
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Select Unit</label>
+                    {units.length === 0 ? (
+                        <p className="text-amber-600 text-sm">No available units. Add units to your properties first.</p>
+                    ) : (
+                        <select
+                            value={selectedUnit}
+                            onChange={(e) => setSelectedUnit(e.target.value)}
+                            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white text-slate-900"
+                            required
+                        >
+                            <option value="">Choose a unit...</option>
+                            {units.map((unit) => (
+                                <option key={unit.id} value={unit.id}>
+                                    {unit.properties?.name} - Unit {unit.unit_number} (KES {unit.rent_amount?.toLocaleString()}/mo)
+                                </option>
+                            ))}
+                        </select>
+                    )}
                 </div>
-                <p className="text-slate-600 mb-4">
-                    Assign <strong>{tenant.full_name}</strong> to a unit:
-                </p>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">Select Unit</label>
-                        {units.length === 0 ? (
-                            <p className="text-amber-600 text-sm">No available units. Add units to your properties first.</p>
-                        ) : (
-                            <select
-                                value={selectedUnit}
-                                onChange={(e) => setSelectedUnit(e.target.value)}
-                                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white text-slate-900"
-                                required
-                            >
-                                <option value="">Choose a unit...</option>
-                                {units.map((unit) => (
-                                    <option key={unit.id} value={unit.id}>
-                                        {unit.properties?.name} - Unit {unit.unit_number} (KES {unit.rent_amount?.toLocaleString()}/mo)
-                                    </option>
-                                ))}
-                            </select>
-                        )}
-                    </div>
-                    <button
-                        type="submit"
-                        disabled={loading || units.length === 0 || !selectedUnit}
-                        className="w-full py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 disabled:opacity-50"
-                    >
-                        {loading ? <Loader2 className="animate-spin mx-auto" size={20} /> : 'Assign Unit'}
-                    </button>
-                </form>
-            </div>
-        </div>
+                <button
+                    type="submit"
+                    disabled={loading || units.length === 0 || !selectedUnit}
+                    className="w-full py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 disabled:opacity-50"
+                >
+                    {loading ? <Loader2 className="animate-spin mx-auto" size={20} /> : 'Assign Unit'}
+                </button>
+            </form>
+        </Modal>
     );
 }
