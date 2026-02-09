@@ -336,7 +336,7 @@ export default function TenantLeasePage() {
                                 <CheckCircle size={24} />
                                 <div>
                                     <p className="font-bold">Lease Signed and Active</p>
-                                    <p className="text-sm">Signed on {format(new Date(lease.signed_at || lease.updated_at), 'PPP')}</p>
+                                    <p className="text-sm">Signed on {format(new Date(lease.signed_at || lease.updated_at || lease.created_at || new Date()), 'PPP')}</p>
                                 </div>
                             </div>
                         </div>
