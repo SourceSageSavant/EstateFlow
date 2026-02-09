@@ -29,7 +29,10 @@ export default function TenantPaymentsPage() {
 
     const fetchData = async () => {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user) {
+            setLoading(false);
+            return;
+        }
 
         // Get profile for phone number
         const { data: profileData } = await supabase

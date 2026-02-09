@@ -9,6 +9,7 @@ import {
     KeyRound,
     CreditCard,
     Wrench,
+    FileText,
     Settings,
     LogOut,
     Menu,
@@ -25,6 +26,7 @@ const navItems = [
     { href: '/admin/guards', label: 'Guards', icon: KeyRound },
     { href: '/admin/payments', label: 'Payments', icon: CreditCard },
     { href: '/admin/maintenance', label: 'Maintenance', icon: Wrench },
+    { href: '/admin/leases', label: 'Leases', icon: FileText },
 ];
 
 export default function Sidebar() {
@@ -81,8 +83,8 @@ export default function Sidebar() {
                                     href={item.href}
                                     onClick={() => setIsOpen(false)}
                                     className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive
-                                            ? 'bg-indigo-600 text-white'
-                                            : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                                        ? 'bg-indigo-600 text-white'
+                                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                                         }`}
                                 >
                                     <Icon size={20} />

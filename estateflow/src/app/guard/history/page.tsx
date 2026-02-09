@@ -25,7 +25,10 @@ export default function GuardHistoryPage() {
 
     const fetchHistory = async () => {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user) {
+            setLoading(false);
+            return;
+        }
 
         const { data } = await supabase
             .from('gate_passes')
@@ -121,8 +124,8 @@ export default function GuardHistoryPage() {
                         key={f}
                         onClick={() => setFilter(f)}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors capitalize ${filter === f
-                                ? 'bg-indigo-600 text-white'
-                                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
                             }`}
                     >
                         {f}

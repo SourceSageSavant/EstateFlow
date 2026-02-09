@@ -23,7 +23,10 @@ export default function ContactPage() {
 
     const fetchData = async () => {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user) {
+            setLoading(false);
+            return;
+        }
 
         // Get tenant's unit and property
         const { data: unitData } = await supabase

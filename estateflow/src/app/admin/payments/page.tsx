@@ -67,7 +67,7 @@ export default function PaymentsPage() {
             .eq('landlord_id', user.id);
 
         if (propertyData && propertyData.length > 0) {
-            const propertyIds = propertyData.map(p => p.id);
+            const propertyIds = (propertyData as any[] || []).map((p: any) => p.id);
 
             // Get units in those properties
             const { data: unitData } = await supabase
@@ -76,7 +76,7 @@ export default function PaymentsPage() {
                 .in('property_id', propertyIds);
 
             if (unitData && unitData.length > 0) {
-                const unitIds = unitData.map(u => u.id);
+                const unitIds = (unitData as any[] || []).map((u: any) => u.id);
 
                 // Get payments for those units
                 const { data: paymentData } = await (supabase
@@ -167,6 +167,42 @@ export default function PaymentsPage() {
         return matchesSearch && matchesStatus;
     });
 
+    const exportToCSV = () => {
+        if (filteredPayments.length === 0) {
+            toast.error('No payments to export');
+            return;
+        }
+
+        const headers = ['Transaction Ref', 'Tenant', 'Property', 'Unit', 'Amount (KES)', 'Status', 'Receipt #', 'Date'];
+        const rows = filteredPayments.map((payment: any) => [
+            payment.transaction_reference || 'N/A',
+            payment.profiles?.full_name || 'N/A',
+            payment.units?.properties?.name || 'N/A',
+            payment.units?.unit_number || 'N/A',
+            payment.amount || 0,
+            payment.status || 'N/A',
+            payment.mpesa_receipt_number || 'N/A',
+            payment.created_at ? new Date(payment.created_at).toLocaleDateString() : 'N/A'
+        ]);
+
+        const csvContent = [
+            headers.join(','),
+            ...rows.map(row => row.map((cell: any) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `payments_export_${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        toast.success(`Exported ${filteredPayments.length} payments`);
+    };
+
     const getStatusBadge = (status: string) => {
         switch (status) {
             case 'completed':
@@ -204,7 +240,10 @@ export default function PaymentsPage() {
                         <MessageCircle size={20} />
                         <span>Send Reminders</span>
                     </button>
-                    <button className="inline-flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white text-slate-700 rounded-lg hover:bg-slate-50 transition-colors">
+                    <button
+                        onClick={exportToCSV}
+                        className="inline-flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+                    >
                         <Download size={20} />
                         <span>Export</span>
                     </button>

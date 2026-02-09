@@ -37,7 +37,10 @@ export default function LeasesPage() {
 
     const fetchLeases = async () => {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user) {
+            setLoading(false);
+            return;
+        }
 
         // Fetch leases for properties owned by this landlord
         const { data, error } = await (supabase

@@ -25,11 +25,14 @@ export default function BannedVisitorsPage() {
 
     const fetchBanned = async () => {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user) {
+            setLoading(false);
+            return;
+        }
 
         // Get guard's assigned properties
         const { data: assignments } = await supabase
-            .from('property_guards')
+            .from('guard_assignments')
             .select('property_id')
             .eq('guard_id', user.id)
             .eq('is_active', true);
@@ -170,7 +173,7 @@ function AddBanForm({ onSubmit }: { onSubmit: (data: any) => void }) {
         if (!user) return;
 
         const { data } = await supabase
-            .from('property_guards')
+            .from('guard_assignments')
             .select('property_id, properties(id, name)')
             .eq('guard_id', user.id)
             .eq('is_active', true);
