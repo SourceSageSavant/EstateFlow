@@ -56,11 +56,14 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Check if email already registered
-        const { data: existingUser } = await supabase.auth.admin.listUsers();
-        const emailExists = existingUser?.users?.some(u => u.email === invitation.email);
+        // Check if email already registered (direct lookup, NOT listUsers)
+        const { data: existingProfile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('email', invitation.email)
+            .maybeSingle();
 
-        if (emailExists) {
+        if (existingProfile) {
             return NextResponse.json(
                 { error: 'An account with this email already exists. Please log in instead.' },
                 { status: 409 }

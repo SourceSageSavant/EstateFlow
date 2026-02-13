@@ -1,14 +1,22 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import type { Property, Unit, Profile } from '@/types/database.types';
+
+// Stable client instance (created once per module)
+const supabase = createClient();
+
+// Unit with joined tenant profile
+type UnitWithTenant = Unit & {
+    current_tenant: Pick<Profile, 'id' | 'full_name' | 'phone_number'> | null;
+};
 
 // Hook to fetch and manage properties
 export function useProperties() {
-    const [properties, setProperties] = useState<any[]>([]);
+    const [properties, setProperties] = useState<Property[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const supabase = createClient();
 
     const fetchProperties = async () => {
         setLoading(true);
@@ -86,10 +94,9 @@ export function useProperties() {
 
 // Hook to fetch units for a property
 export function useUnits(propertyId: string) {
-    const [units, setUnits] = useState<any[]>([]);
+    const [units, setUnits] = useState<UnitWithTenant[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const supabase = createClient();
 
     const fetchUnits = async () => {
         setLoading(true);
@@ -105,7 +112,7 @@ export function useUnits(propertyId: string) {
         if (error) {
             setError(error.message);
         } else {
-            setUnits(data || []);
+            setUnits((data as unknown as UnitWithTenant[]) || []);
         }
         setLoading(false);
     };
@@ -135,9 +142,8 @@ export function useUnits(propertyId: string) {
 
 // Hook to get current user profile
 export function useProfile() {
-    const [profile, setProfile] = useState<any>(null);
+    const [profile, setProfile] = useState<Profile | null>(null);
     const [loading, setLoading] = useState(true);
-    const supabase = createClient();
 
     useEffect(() => {
         const fetchProfile = async () => {

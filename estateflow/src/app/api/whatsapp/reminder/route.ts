@@ -86,7 +86,6 @@ export async function POST(request: NextRequest) {
         }
 
         // Verify landlord owns this property
-        // @ts-ignore
         if (unit.properties?.landlord_id !== user.id) {
             return NextResponse.json({ error: 'Not authorized for this property' }, { status: 403 });
         }
@@ -110,7 +109,6 @@ export async function POST(request: NextRequest) {
             tenantName: tenant.full_name || 'Tenant',
             tenantPhone: tenant.phone_number,
             amount: unit.rent_amount,
-            // @ts-ignore
             propertyName: unit.properties?.name || 'Property',
             unitNumber: unit.unit_number,
             dueDate: dueDateStr,

@@ -48,7 +48,6 @@ export async function POST(request: NextRequest) {
         }
 
         // Look up the pass
-        // @ts-ignore - gate_passes table not in types yet
         const { data: pass, error: passError } = await supabase
             .from('gate_passes')
             .select(`
@@ -88,7 +87,6 @@ export async function POST(request: NextRequest) {
 
         if (now > validUntil) {
             // Update status to expired
-            // @ts-ignore
             await supabase
                 .from('gate_passes')
                 .update({ status: 'expired' })

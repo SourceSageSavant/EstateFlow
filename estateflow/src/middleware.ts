@@ -2,8 +2,24 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 // Define protected route prefixes
-const protectedRoutes = ['/admin', '/tenant', '/guard']
+const protectedRoutes = ['/admin', '/tenant', '/guard', '/superadmin']
 const publicRoutes = ['/login', '/auth', '/invite', '/api', '/offline', '/_next', '/favicon.ico']
+
+// Role → which route prefixes they're allowed to access
+const roleRouteMap: Record<string, string[]> = {
+    superadmin: ['/superadmin', '/admin'],  // superadmin can also inspect admin panel
+    landlord: ['/admin'],
+    tenant: ['/tenant'],
+    guard: ['/guard'],
+}
+
+// Role → default dashboard
+const dashboardMap: Record<string, string> = {
+    superadmin: '/superadmin/dashboard',
+    landlord: '/admin/dashboard',
+    tenant: '/tenant',
+    guard: '/guard',
+}
 
 export async function middleware(request: NextRequest) {
     // Skip if Supabase env vars are missing
@@ -57,19 +73,17 @@ export async function middleware(request: NextRequest) {
 
     const { data: { user } } = await supabase.auth.getUser()
 
-    // Check if accessing protected route without auth
     const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
 
+    // --- Authentication: must be logged in for protected routes ---
     if (isProtectedRoute && !user) {
-        // Redirect to login with return URL
         const loginUrl = new URL('/login', request.url)
         loginUrl.searchParams.set('redirect', pathname)
         return NextResponse.redirect(loginUrl)
     }
 
-    // If logged in and on login page, redirect to appropriate dashboard
-    if (user && pathname === '/login') {
-        // Get user's role from profile
+    // --- Authorization: role must match the route section ---
+    if (isProtectedRoute && user) {
         const { data: profile } = await supabase
             .from('profiles')
             .select('role')
@@ -77,12 +91,26 @@ export async function middleware(request: NextRequest) {
             .single()
 
         const role = profile?.role || 'landlord'
-        const dashboardMap: Record<string, string> = {
-            landlord: '/admin/dashboard',
-            tenant: '/tenant',
-            guard: '/guard'
-        }
+        const allowedPrefixes = roleRouteMap[role] || []
+        const hasAccess = allowedPrefixes.some(prefix => pathname.startsWith(prefix))
 
+        if (!hasAccess) {
+            // Redirect to their own dashboard instead of showing forbidden
+            return NextResponse.redirect(
+                new URL(dashboardMap[role] || '/login', request.url)
+            )
+        }
+    }
+
+    // --- Login page redirect: send logged-in users to their dashboard ---
+    if (user && pathname === '/login') {
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single()
+
+        const role = profile?.role || 'landlord'
         return NextResponse.redirect(new URL(dashboardMap[role] || '/admin/dashboard', request.url))
     }
 
@@ -94,4 +122,3 @@ export const config = {
         '/((?!_next/static|_next/image|favicon.ico|manifest.json|icons/|sw.js).*)',
     ],
 }
-

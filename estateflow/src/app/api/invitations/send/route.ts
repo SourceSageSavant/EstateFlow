@@ -104,7 +104,6 @@ export async function POST(request: NextRequest) {
         const token = randomBytes(32).toString('hex');
 
         // Create invitation record
-        // @ts-ignore - database types may not include invitations yet
         const { data: invitation, error: insertError } = await supabase
             .from('invitations')
             .insert({

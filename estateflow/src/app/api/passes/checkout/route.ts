@@ -28,6 +28,17 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
+        // Verify user is a guard
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+
+        if (!profile || profile.role !== 'guard') {
+            return NextResponse.json({ error: 'Only guards can check out visitors' }, { status: 403 });
+        }
+
         // Get request body
         const body = await request.json();
         const { passId, location } = body;
@@ -37,7 +48,6 @@ export async function POST(request: NextRequest) {
         }
 
         // Get the pass
-        // @ts-ignore - gate_passes table not in types yet
         const { data: pass, error: passError } = await supabase
             .from('gate_passes')
             .select('*')
@@ -53,7 +63,6 @@ export async function POST(request: NextRequest) {
         }
 
         // Update pass to checked out
-        // @ts-ignore
         const { data: updatedPass, error: updateError } = await supabase
             .from('gate_passes')
             .update({

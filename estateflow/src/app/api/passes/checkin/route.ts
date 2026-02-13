@@ -53,7 +53,6 @@ export async function POST(request: NextRequest) {
         }
 
         // Get the pass and associated property
-        // @ts-ignore - gate_passes table not in types yet
         const { data: pass, error: passError } = await supabase
             .from('gate_passes')
             .select(`
@@ -90,19 +89,23 @@ export async function POST(request: NextRequest) {
         }
 
         // Geofencing Check
-        // Only run if property has coordinates set and client sent location
-        // @ts-ignore
-        if (pass.properties?.latitude && pass.properties?.longitude && location?.latitude && location?.longitude) {
+        // If property has coordinates (geofencing enabled), location is REQUIRED
+        const propertyHasGeofence = pass.properties?.latitude && pass.properties?.longitude;
+
+        if (propertyHasGeofence && (!location?.latitude || !location?.longitude)) {
+            return NextResponse.json({
+                error: 'Location is required for check-in at this property. Please enable location services.',
+            }, { status: 400 });
+        }
+
+        if (propertyHasGeofence && location?.latitude && location?.longitude) {
             const distance = getDistanceInMeters(
                 location.latitude,
                 location.longitude,
-                // @ts-ignore
                 pass.properties.latitude,
-                // @ts-ignore
                 pass.properties.longitude
             );
 
-            // @ts-ignore
             const radius = pass.properties.geofence_radius || 100; // Default 100m
 
             if (distance > radius) {
@@ -113,7 +116,6 @@ export async function POST(request: NextRequest) {
         }
 
         // Update pass to checked in
-        // @ts-ignore
         const { data: updatedPass, error: updateError } = await supabase
             .from('gate_passes')
             .update({

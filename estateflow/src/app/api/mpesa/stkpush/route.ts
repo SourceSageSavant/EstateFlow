@@ -29,7 +29,6 @@ export async function POST(request: NextRequest) {
         }
 
         // Get payment settings for this property
-        // @ts-ignore
         const { data: settings, error: settingsError } = await supabase
             .from('payment_settings')
             .select('*')
@@ -74,8 +73,7 @@ export async function POST(request: NextRequest) {
         const callbackUrl = `${baseUrl}/api/mpesa/callback`;
 
         // Create transaction record first
-        const transactionRef = `EST${Date.now()}`;
-        // @ts-ignore
+        const transactionRef = `EST${Date.now()}-${crypto.randomUUID().slice(0, 6)}`;
         const { data: transaction, error: txError } = await supabase
             .from('payment_transactions')
             .insert({
@@ -111,7 +109,6 @@ export async function POST(request: NextRequest) {
             });
 
             // Update transaction with M-Pesa request IDs
-            // @ts-ignore
             await supabase
                 .from('payment_transactions')
                 .update({
@@ -130,7 +127,6 @@ export async function POST(request: NextRequest) {
 
         } catch (mpesaError: any) {
             // Update transaction as failed
-            // @ts-ignore
             await supabase
                 .from('payment_transactions')
                 .update({

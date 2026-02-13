@@ -5,12 +5,12 @@ import { createServerClient } from '@supabase/ssr';
 import QRCode from 'qrcode';
 import crypto from 'crypto';
 
-// Generate a 6-character access code
+// Generate a 6-character access code using crypto-secure randomness
 function generateAccessCode(): string {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let result = '';
     for (let i = 0; i < 6; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
+        result += chars.charAt(crypto.randomInt(chars.length));
     }
     return result;
 }
@@ -41,6 +41,17 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
+        // Verify user is a tenant (only tenants create gate passes)
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+
+        if (!profile || profile.role !== 'tenant') {
+            return NextResponse.json({ error: 'Only tenants can create gate passes' }, { status: 403 });
+        }
+
         // Get request body
         const body = await request.json();
         const {
@@ -69,7 +80,6 @@ export async function POST(request: NextRequest) {
 
         // Ensure code is unique
         while (attempts < 10) {
-            // @ts-ignore - gate_passes table not in types yet
             const { data: existing } = await supabase
                 .from('gate_passes')
                 .select('id')
@@ -99,7 +109,6 @@ export async function POST(request: NextRequest) {
         });
 
         // Create the pass
-        // @ts-ignore - gate_passes table not in types yet
         const { data: pass, error: insertError } = await supabase
             .from('gate_passes')
             .insert({
